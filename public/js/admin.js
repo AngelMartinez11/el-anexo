@@ -1083,6 +1083,23 @@
     }
   });
 
+  $('form-password').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    mostrarError('error-password', '');
+    const cuerpo = { actual: $('p-actual').value, nueva: $('p-nueva').value, confirmacion: $('p-confirmacion').value };
+    if (cuerpo.nueva.length < 8) return mostrarError('error-password', 'La nueva contraseña debe tener al menos 8 caracteres.');
+    if (cuerpo.nueva !== cuerpo.confirmacion) return mostrarError('error-password', 'La confirmación no coincide con la nueva contraseña.');
+    try {
+      const r = await api('admin/password', { metodo: 'POST', cuerpo });
+      estado.token = r.token;
+      A.guardarToken(CLAVE_TOKEN, r.token);
+      $('form-password').reset();
+      A.aviso('Contraseña cambiada.');
+    } catch (error) {
+      mostrarError('error-password', error.message);
+    }
+  });
+
   // ---------- Inicio ----------
 
   if (estado.token) {

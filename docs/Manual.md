@@ -33,7 +33,7 @@ Página de reservas para clientes y panel de administración para la barbería E
 | Clientes | Búsqueda, historial, visitas, total gastado, inasistencias, notas del barbero, bloqueo con motivo, restablecer PIN |
 | Finanzas | Ingresos del día, mes actual y mes pasado, separados por efectivo y tarjeta; gastos y ganancia neta; efectivo en caja; servicios brindados del día; desglose por servicio; reporte mensual por día; descarga a Excel (CSV); aviso de citas pasadas sin cobrar |
 | Horario | Horario semanal con uno o varios turnos por día, días especiales (cerrar o abrir con otro horario) y bloqueo de horas |
-| Ajustes | Servicios (crear, editar, desactivar), datos del negocio y reglas de la agenda |
+| Ajustes | Servicios (crear, editar, desactivar), datos del negocio, reglas de la agenda y cambio de contraseña del panel |
 
 ### Recordatorio por WhatsApp
 
@@ -120,7 +120,7 @@ git push -u origin main
 |---|---|
 | `DATABASE_URL` | Cadena del pooler de Supabase |
 | `JWT_SECRET` | Texto aleatorio de 32 caracteres o más |
-| `ADMIN_PASSWORD` | Contraseña del panel (mínimo 8 caracteres) |
+| `ADMIN_PASSWORD` | Contraseña inicial del panel (mínimo 8 caracteres) |
 
    Para generar `JWT_SECRET`:
 
@@ -163,7 +163,7 @@ npm test
 npm run demo
 ```
 
-- `npm test` ejecuta 16 pruebas de la API contra PostgreSQL en memoria (PGlite): reservas, traslapes, PIN, cancelación, cobros, finanzas, bloqueos, horario y ajustes.
+- `npm test` ejecuta 17 pruebas de la API contra PostgreSQL en memoria (PGlite): reservas, traslapes, PIN, cancelación, cobros, finanzas, bloqueos, horario, ajustes y cambio de contraseña.
 - `npm run demo` levanta `http://localhost:8888` con datos de ejemplo, sin Supabase ni Netlify. Panel en `/admin/` con la contraseña `anexo-demo`. Los datos se pierden al detener el servidor.
 
 Para probar contra la base real de Supabase:
@@ -231,6 +231,7 @@ Rutas del panel (requieren token de administrador): `admin/login`, `admin/agenda
 ## 8. Mantenimiento
 
 - **Cambios en la base de datos**: agregar una migración nueva al final de `MIGRACIONES` en `netlify/lib/migraciones.mjs` con el siguiente número de versión. No modificar migraciones ya publicadas.
-- **Cambiar la contraseña del panel**: editar `ADMIN_PASSWORD` en Netlify y volver a desplegar.
+- **Cambiar la contraseña del panel**: Ajustes > Cambiar contraseña del panel. Se pide la actual, se guarda cifrada (scrypt) en la base de datos y se cierran las sesiones abiertas en otros dispositivos. Desde ese momento `ADMIN_PASSWORD` ya no se usa.
+- **Olvidé la contraseña del panel**: en Supabase > Table Editor > `configuracion`, borrar la fila `admin_password_hash`. El panel vuelve a aceptar la contraseña de `ADMIN_PASSWORD`.
 - **Cerrar todas las sesiones**: cambiar `JWT_SECRET` y volver a desplegar.
 - **Ver los datos directamente**: Supabase > Table Editor.

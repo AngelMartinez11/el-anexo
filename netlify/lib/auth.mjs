@@ -50,17 +50,43 @@ function tokenDeSolicitud(req) {
   return h.startsWith('Bearer ') ? h.slice(7) : null;
 }
 
-export function tokenAdmin() {
-  return crearToken({ rol: 'admin' }, DURACION_ADMIN_S);
+// La version cambia cada vez que se cambia la contrasena: invalida las sesiones anteriores.
+async function versionAdmin() {
+  const fila = await una("SELECT valor FROM configuracion WHERE clave = 'admin_version'");
+  return fila ? Number(fila.valor) : 0;
+}
+
+export async function tokenAdmin() {
+  return crearToken({ rol: 'admin', v: await versionAdmin() }, DURACION_ADMIN_S);
+}
+
+// Verifica la contrasena del panel: primero la guardada desde el panel, si no la de ADMIN_PASSWORD.
+export async function verificarPasswordAdmin(password) {
+  const fila = await una("SELECT valor FROM configuracion WHERE clave = 'admin_password_hash'");
+  if (fila) return verificarPin(String(password), fila.valor);
+  const esperado = process.env.ADMIN_PASSWORD;
+  if (!esperado || esperado.length < 8) {
+    throw new ErrorHttp(500, 'Falta configurar ADMIN_PASSWORD en Netlify (mínimo 8 caracteres).');
+  }
+  return compararSeguro(String(password), esperado);
+}
+
+export async function guardarPasswordAdmin(nueva) {
+  const version = (await versionAdmin()) + 1;
+  await consulta(
+    `INSERT INTO configuracion (clave, valor) VALUES ('admin_password_hash', $1), ('admin_version', $2)
+     ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor`,
+    [hashPin(nueva), String(version)],
+  );
 }
 
 export function tokenCliente(clienteId) {
   return crearToken({ rol: 'cliente', id: clienteId }, DURACION_CLIENTE_S);
 }
 
-export function exigirAdmin(req) {
+export async function exigirAdmin(req) {
   const carga = verificarToken(tokenDeSolicitud(req));
-  if (!carga || carga.rol !== 'admin') {
+  if (!carga || carga.rol !== 'admin' || Number(carga.v || 0) !== (await versionAdmin())) {
     throw new ErrorHttp(401, 'Tu sesión expiró. Vuelve a ingresar.', 'sesion');
   }
   return carga;

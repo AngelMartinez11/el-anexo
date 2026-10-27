@@ -307,3 +307,39 @@ test('servicios y configuracion editables', async () => {
   const malo = await llamar('PUT', 'admin/config', { token: tokenAdmin, cuerpo: { intervalo_min: 7 } });
   assert.equal(malo.estado, 400);
 });
+
+test('cambiar contraseña del administrador cierra las sesiones anteriores', async () => {
+  const sesionVieja = tokenAdmin;
+  const corta = await llamar('POST', 'admin/password', {
+    token: sesionVieja, cuerpo: { actual: 'clave-admin-123', nueva: 'corta', confirmacion: 'corta' },
+  });
+  assert.equal(corta.estado, 400);
+  const distinta = await llamar('POST', 'admin/password', {
+    token: sesionVieja, cuerpo: { actual: 'clave-admin-123', nueva: 'Nueva.2026x', confirmacion: 'Otra.2026x' },
+  });
+  assert.equal(distinta.estado, 400);
+  const malaActual = await llamar('POST', 'admin/password', {
+    token: sesionVieja, cuerpo: { actual: 'no-es', nueva: 'Nueva.2026x', confirmacion: 'Nueva.2026x' },
+  });
+  assert.equal(malaActual.estado, 400);
+
+  const ok = await llamar('POST', 'admin/password', {
+    token: sesionVieja, cuerpo: { actual: 'clave-admin-123', nueva: 'Nueva.2026x', confirmacion: 'Nueva.2026x' },
+  });
+  assert.equal(ok.estado, 200, JSON.stringify(ok.datos));
+  assert.ok(ok.datos.token);
+
+  const vieja = await llamar('GET', 'admin/agenda', { token: sesionVieja });
+  assert.equal(vieja.estado, 401, 'la sesion anterior queda invalida');
+  const nueva = await llamar('GET', 'admin/agenda', { token: ok.datos.token });
+  assert.equal(nueva.estado, 200);
+
+  const loginVieja = await llamar('POST', 'admin/login', { cuerpo: { password: 'clave-admin-123' } });
+  assert.equal(loginVieja.estado, 401);
+  const loginNueva = await llamar('POST', 'admin/login', { cuerpo: { password: 'Nueva.2026x' } });
+  assert.equal(loginNueva.estado, 200);
+
+  const conf = await llamar('GET', 'admin/config', { token: loginNueva.datos.token });
+  assert.equal(conf.datos.config.admin_password_hash, undefined, 'no expone el hash');
+  assert.equal(conf.datos.config.admin_version, undefined);
+});

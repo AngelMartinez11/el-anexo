@@ -1,7 +1,8 @@
 // Rutas del panel de administrador.
 import { consulta, una, transaccion } from './db.mjs';
 import {
-  exigirAdmin, tokenAdmin, compararSeguro, revisarIntentos, registrarIntentoFallido, limpiarIntentos,
+  exigirAdmin, tokenAdmin, verificarPasswordAdmin, guardarPasswordAdmin,
+  revisarIntentos, registrarIntentoFallido, limpiarIntentos,
 } from './auth.mjs';
 import { obtenerConfiguracion, horarioDeFecha, slotsDeFecha } from './disponibilidad.mjs';
 import { crearCita, obtenerServicio, clientePorTelefono, SELECT_CITA } from './citas.mjs';
@@ -13,17 +14,40 @@ import {
 // ---------- Sesion ----------
 
 async function login(cuerpo) {
-  const esperado = process.env.ADMIN_PASSWORD;
-  if (!esperado || esperado.length < 8) {
-    throw new ErrorHttp(500, 'Falta configurar ADMIN_PASSWORD en Netlify (mínimo 8 caracteres).');
-  }
   await revisarIntentos('admin');
-  if (!compararSeguro(String(cuerpo.password || ''), esperado)) {
+  if (!(await verificarPasswordAdmin(cuerpo.password || ''))) {
     await registrarIntentoFallido('admin');
     throw new ErrorHttp(401, 'Contraseña incorrecta.');
   }
   await limpiarIntentos('admin');
-  return { token: tokenAdmin() };
+  return { token: await tokenAdmin() };
+}
+
+// Cambia la contrasena del panel. Cierra las demas sesiones y devuelve un token nuevo.
+async function cambiarPassword(cuerpo) {
+  const nueva = String(cuerpo.nueva || '');
+  if (nueva.length < 8 || nueva.length > 72) {
+    throw new ErrorHttp(400, 'La nueva contraseña debe tener entre 8 y 72 caracteres.');
+  }
+  if (nueva !== String(cuerpo.confirmacion || '')) {
+    throw new ErrorHttp(400, 'La confirmación no coincide con la nueva contraseña.');
+  }
+  await revisarIntentos('admin');
+  if (!(await verificarPasswordAdmin(cuerpo.actual || ''))) {
+    await registrarIntentoFallido('admin');
+    throw new ErrorHttp(400, 'La contraseña actual no es correcta.');
+  }
+  await guardarPasswordAdmin(nueva);
+  return { token: await tokenAdmin() };
+}
+
+// Claves internas que nunca se envian al navegador.
+const CLAVES_PRIVADAS = ['admin_password_hash', 'admin_version'];
+
+async function configuracionVisible() {
+  const config = await obtenerConfiguracion();
+  for (const c of CLAVES_PRIVADAS) delete config[c];
+  return config;
 }
 
 // ---------- Agenda ----------
@@ -587,13 +611,13 @@ async function guardarConfiguracion(cuerpo) {
       [clave, limpio],
     );
   }
-  return { config: await obtenerConfiguracion() };
+  return { config: await configuracionVisible() };
 }
 
 // ---------- Tabla de rutas ----------
 
 const admin = (fn) => async (req, url, cuerpo, params) => {
-  exigirAdmin(req);
+  await exigirAdmin(req);
   return fn(req, url, cuerpo, params);
 };
 
@@ -621,6 +645,7 @@ export const rutasAdmin = [
   ['GET', /^admin\/servicios$/, admin(() => listarServicios())],
   ['POST', /^admin\/servicios$/, admin((req, url, cuerpo) => crearServicio(cuerpo))],
   ['PATCH', /^admin\/servicios\/(\d+)$/, admin((req, url, cuerpo, p) => actualizarServicio(Number(p[1]), cuerpo))],
-  ['GET', /^admin\/config$/, admin(async () => ({ config: await obtenerConfiguracion() }))],
+  ['GET', /^admin\/config$/, admin(async () => ({ config: await configuracionVisible() }))],
   ['PUT', /^admin\/config$/, admin((req, url, cuerpo) => guardarConfiguracion(cuerpo))],
+  ['POST', /^admin\/password$/, admin((req, url, cuerpo) => cambiarPassword(cuerpo))],
 ];
