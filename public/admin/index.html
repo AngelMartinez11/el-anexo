@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panel | El Anexo</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#1d1510">
+  <link rel="icon" href="../img/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/estilos.css">
+  <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body class="panel">
+
+  <!-- Acceso -->
+  <main id="vista-login" class="login oculto">
+    <form id="form-login" class="login-caja" novalidate>
+      <span class="sello sello-login"><img src="../img/logo.png" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'EA'}))"></span>
+      <h1>Panel de El Anexo</h1>
+      <div class="campo">
+        <label for="l-password">Contraseña</label>
+        <input class="entrada" id="l-password" type="password" autocomplete="current-password" required>
+      </div>
+      <div id="error-login" class="mensaje oculto" role="alert"></div>
+      <button class="boton" type="submit" style="width:100%">Entrar</button>
+      <a class="boton-texto" href="../" style="display:inline-block;margin-top:16px">Ir a la página de clientes</a>
+    </form>
+  </main>
+
+  <!-- Aplicacion -->
+  <div id="vista-app" class="oculto">
+    <header class="barra">
+      <div class="contenedor panel-barra">
+        <a class="marca" href="../" target="_blank" rel="noopener" aria-label="Ver página de clientes">
+          <span class="sello"><img src="../img/logo.png" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'EA'}))"></span>
+          <strong>El Anexo</strong>
+        </a>
+        <nav class="menu" aria-label="Secciones del panel">
+          <button type="button" data-vista="agenda" aria-current="page">Agenda</button>
+          <button type="button" data-vista="clientes">Clientes</button>
+          <button type="button" data-vista="finanzas">Finanzas</button>
+          <button type="button" data-vista="horario">Horario</button>
+          <button type="button" data-vista="ajustes">Ajustes</button>
+        </nav>
+        <button class="boton-texto" id="btn-salir" type="button">Salir</button>
+      </div>
+    </header>
+
+    <main class="contenedor panel-cuerpo">
+
+      <!-- Agenda -->
+      <section id="vista-agenda" data-seccion>
+        <div class="agenda-barra">
+          <div class="navegar-fecha">
+            <button class="flecha" type="button" id="dia-anterior" aria-label="Día anterior">&#8249;</button>
+            <div>
+              <h1 id="titulo-dia">Hoy</h1>
+              <span class="texto-suave" id="subtitulo-dia"></span>
+            </div>
+            <button class="flecha" type="button" id="dia-siguiente" aria-label="Día siguiente">&#8250;</button>
+          </div>
+          <div class="agenda-acciones">
+            <button class="boton boton-secundario boton-chico" type="button" id="btn-hoy">Hoy</button>
+            <button class="boton boton-secundario boton-chico" type="button" id="btn-mes" aria-expanded="false">Ver mes</button>
+            <button class="boton boton-chico" type="button" id="btn-nueva-cita">Nueva cita</button>
+          </div>
+        </div>
+
+        <div id="calendario-mes" class="calendario oculto"></div>
+
+        <div class="cifras" id="cifras-dia"></div>
+        <div id="recordatorios"></div>
+        <div id="linea-tiempo" class="linea-tiempo" aria-live="polite"></div>
+        <details id="canceladas" class="canceladas oculto">
+          <summary></summary>
+          <div id="lista-canceladas"></div>
+        </details>
+      </section>
+
+      <!-- Clientes -->
+      <section id="vista-clientes" data-seccion class="oculto">
+        <div class="seccion-titulo">
+          <h1>Clientes</h1>
+          <div class="filtros">
+            <input class="entrada" id="buscar-cliente" type="search" placeholder="Buscar por nombre o teléfono" aria-label="Buscar cliente">
+            <select class="entrada" id="filtro-cliente" aria-label="Filtrar clientes">
+              <option value="todos">Todos</option>
+              <option value="bloqueados">Bloqueados</option>
+            </select>
+          </div>
+        </div>
+        <div id="lista-clientes" class="tabla-contenedor"></div>
+      </section>
+
+      <!-- Finanzas -->
+      <section id="vista-finanzas" data-seccion class="oculto">
+        <div class="seccion-titulo">
+          <h1>Finanzas</h1>
+          <div class="filtros">
+            <label class="sr-only" for="fecha-finanzas">Día</label>
+            <input class="entrada" id="fecha-finanzas" type="date">
+          </div>
+        </div>
+        <div id="contenido-finanzas"></div>
+      </section>
+
+      <!-- Horario -->
+      <section id="vista-horario" data-seccion class="oculto">
+        <div class="seccion-titulo"><h1>Horario de atención</h1></div>
+        <div class="bloque">
+          <h2>Horario semanal</h2>
+          <p class="texto-suave">Cada día puede tener uno o varios turnos. Un día sin turnos queda cerrado.</p>
+          <div id="editor-semana"></div>
+          <button class="boton" type="button" id="guardar-semana">Guardar horario semanal</button>
+        </div>
+        <div class="dos-columnas">
+          <div class="bloque">
+            <h2>Días especiales</h2>
+            <p class="texto-suave">Cierra un día o abre con otro horario (feriados, viajes, días extra).</p>
+            <form id="form-especial" novalidate>
+              <div class="campo"><label for="e-fecha">Fecha</label><input class="entrada" id="e-fecha" type="date" required></div>
+              <label class="casilla" style="margin-bottom:12px"><input type="checkbox" id="e-cerrado" checked><span>Cerrado todo el día</span></label>
+              <div id="e-rangos" class="oculto"></div>
+              <div class="campo"><label for="e-nota">Nota (opcional)</label><input class="entrada" id="e-nota" maxlength="120" placeholder="Feriado, capacitación..."></div>
+              <button class="boton" type="submit">Guardar día especial</button>
+            </form>
+            <div id="lista-especiales" class="lista-simple"></div>
+          </div>
+          <div class="bloque">
+            <h2>Bloquear horas</h2>
+            <p class="texto-suave">Aparta un rango de horas de un día para que nadie pueda agendar.</p>
+            <form id="form-bloqueo" novalidate>
+              <div class="campo"><label for="b-fecha">Fecha</label><input class="entrada" id="b-fecha" type="date" required></div>
+              <div class="fila-campos">
+                <div class="campo"><label for="b-inicio">Desde</label><input class="entrada" id="b-inicio" type="time" step="900" required></div>
+                <div class="campo"><label for="b-fin">Hasta</label><input class="entrada" id="b-fin" type="time" step="900" required></div>
+              </div>
+              <div class="campo"><label for="b-motivo">Motivo (opcional)</label><input class="entrada" id="b-motivo" maxlength="80" placeholder="Almuerzo, diligencia..."></div>
+              <button class="boton" type="submit">Bloquear horas</button>
+            </form>
+            <div id="lista-bloqueos" class="lista-simple"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Ajustes -->
+      <section id="vista-ajustes" data-seccion class="oculto">
+        <div class="seccion-titulo"><h1>Ajustes</h1></div>
+        <div class="bloque">
+          <h2>Servicios</h2>
+          <p class="texto-suave">Los servicios inactivos no aparecen en la página de clientes, pero se conservan en el historial.</p>
+          <div id="editor-servicios"></div>
+          <button class="boton boton-secundario" type="button" id="agregar-servicio">Agregar servicio</button>
+        </div>
+        <form class="bloque" id="form-config" novalidate>
+          <h2>Datos del negocio y reglas de agenda</h2>
+          <div class="rejilla-config">
+            <div class="campo"><label for="c-negocio_nombre">Nombre del negocio</label><input class="entrada" id="c-negocio_nombre" maxlength="60"></div>
+            <div class="campo"><label for="c-barbero_nombre">Barbero</label><input class="entrada" id="c-barbero_nombre" maxlength="60"></div>
+            <div class="campo ancho-completo"><label for="c-direccion">Dirección (aparece en el recordatorio)</label><input class="entrada" id="c-direccion" maxlength="160"></div>
+            <div class="campo"><label for="c-whatsapp">WhatsApp del negocio</label><input class="entrada" id="c-whatsapp" inputmode="tel"></div>
+            <div class="campo"><label for="c-intervalo_min">Bloques de la agenda</label>
+              <select class="entrada" id="c-intervalo_min">
+                <option value="15">Cada 15 minutos</option><option value="20">Cada 20 minutos</option>
+                <option value="30">Cada 30 minutos</option><option value="45">Cada 45 minutos</option>
+                <option value="60">Cada hora</option>
+              </select>
+            </div>
+            <div class="campo"><label for="c-anticipacion_min">Anticipación mínima para reservar (minutos)</label><input class="entrada" id="c-anticipacion_min" type="number" min="0" max="1440"></div>
+            <div class="campo"><label for="c-dias_adelanto">Días que se pueden reservar por adelantado</label><input class="entrada" id="c-dias_adelanto" type="number" min="1" max="60"></div>
+            <div class="campo"><label for="c-horas_cancelacion">Horas antes para que el cliente pueda cancelar</label><input class="entrada" id="c-horas_cancelacion" type="number" min="0" max="72"></div>
+            <div class="campo"><label for="c-instagram">Instagram</label><input class="entrada" id="c-instagram" type="url"></div>
+            <div class="campo"><label for="c-facebook">Facebook</label><input class="entrada" id="c-facebook" type="url"></div>
+          </div>
+          <div id="error-config" class="mensaje oculto" role="alert"></div>
+          <button class="boton" type="submit">Guardar ajustes</button>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <!-- Dialogo: nueva cita -->
+  <dialog id="dlg-cita" aria-labelledby="dlg-cita-titulo">
+    <form class="dialogo-cuerpo" id="form-cita" novalidate>
+      <div class="dialogo-cabeza">
+        <h3 id="dlg-cita-titulo">Nueva cita</h3>
+        <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="pestanas" role="tablist">
+        <button type="button" role="tab" aria-selected="true" data-modo-cliente="buscar">Cliente registrado</button>
+        <button type="button" role="tab" aria-selected="false" data-modo-cliente="nuevo">Cliente nuevo</button>
+      </div>
+      <div id="cliente-buscar">
+        <div class="campo">
+          <label for="n-buscar">Buscar cliente</label>
+          <input class="entrada" id="n-buscar" type="search" placeholder="Nombre o teléfono" autocomplete="off">
+        </div>
+        <div id="n-resultados" class="resultados"></div>
+        <div id="n-elegido" class="elegido oculto"></div>
+      </div>
+      <div id="cliente-nuevo" class="oculto">
+        <div class="campo"><label for="n-nombre">Nombre completo</label><input class="entrada" id="n-nombre" maxlength="80"></div>
+        <div class="campo"><label for="n-telefono">WhatsApp</label><input class="entrada" id="n-telefono" inputmode="tel" placeholder="5555-1234"></div>
+      </div>
+      <div class="campo"><label for="n-servicio">Servicio</label><select class="entrada" id="n-servicio"></select></div>
+      <div class="fila-campos">
+        <div class="campo"><label for="n-fecha">Fecha</label><input class="entrada" id="n-fecha" type="date"></div>
+        <div class="campo" id="campo-hora-lista"><label for="n-hora">Hora</label><select class="entrada" id="n-hora"></select></div>
+        <div class="campo oculto" id="campo-hora-libre"><label for="n-hora-libre">Hora</label><input class="entrada" id="n-hora-libre" type="time" step="300"></div>
+      </div>
+      <label class="casilla" style="margin-bottom:14px"><input type="checkbox" id="n-forzar"><span>Fuera de horario o registro manual<br><small class="texto-suave">Permite cualquier hora, aunque no esté en el horario de atención.</small></span></label>
+      <div class="fila-campos">
+        <div class="campo"><label for="n-precio">Precio (Q)</label><input class="entrada" id="n-precio" type="number" min="0" step="0.01"></div>
+        <div class="campo"><label for="n-pago">Cobro</label>
+          <select class="entrada" id="n-pago">
+            <option value="">Cobrar después</option>
+            <option value="efectivo">Ya pagó en efectivo</option>
+            <option value="tarjeta">Ya pagó con tarjeta</option>
+          </select>
+        </div>
+      </div>
+      <label class="casilla" style="margin-bottom:14px"><input type="checkbox" id="n-vip"><span>Cliente VIP</span></label>
+      <div class="campo"><label for="n-notas">Notas (opcional)</label><textarea class="entrada" id="n-notas" maxlength="300"></textarea></div>
+      <div id="error-cita" class="mensaje oculto" role="alert"></div>
+      <button class="boton" type="submit" style="width:100%">Guardar cita</button>
+    </form>
+  </dialog>
+
+  <!-- Dialogo: editar cita -->
+  <dialog id="dlg-editar" aria-labelledby="dlg-editar-titulo">
+    <form class="dialogo-cuerpo" id="form-editar" novalidate>
+      <div class="dialogo-cabeza">
+        <h3 id="dlg-editar-titulo">Cita</h3>
+        <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">&times;</button>
+      </div>
+      <p id="editar-detalle" class="texto-suave" style="margin-top:0"></p>
+      <div class="fila-campos">
+        <div class="campo"><label for="ed-precio">Precio (Q)</label><input class="entrada" id="ed-precio" type="number" min="0" step="0.01"></div>
+        <div class="campo" id="campo-ed-metodo"><label for="ed-metodo">Método de pago</label>
+          <select class="entrada" id="ed-metodo"><option value="efectivo">Efectivo</option><option value="tarjeta">Tarjeta</option></select>
+        </div>
+      </div>
+      <label class="casilla" style="margin-bottom:14px"><input type="checkbox" id="ed-vip"><span>Cliente VIP</span></label>
+      <div class="campo"><label for="ed-notas">Notas</label><textarea class="entrada" id="ed-notas" maxlength="300"></textarea></div>
+      <div id="error-editar" class="mensaje oculto" role="alert"></div>
+      <button class="boton" type="submit" style="width:100%">Guardar cambios</button>
+      <div class="acciones-secundarias" id="editar-acciones"></div>
+    </form>
+  </dialog>
+
+  <!-- Dialogo: cliente -->
+  <dialog id="dlg-cliente" class="dialogo-ancho" aria-labelledby="dlg-cliente-titulo">
+    <div class="dialogo-cuerpo">
+      <div class="dialogo-cabeza">
+        <h3 id="dlg-cliente-titulo">Cliente</h3>
+        <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">&times;</button>
+      </div>
+      <div id="contenido-cliente"></div>
+    </div>
+  </dialog>
+
+  <script src="../js/comun.js"></script>
+  <script src="../js/admin.js"></script>
+</body>
+</html>
