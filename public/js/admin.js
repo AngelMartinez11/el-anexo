@@ -125,11 +125,24 @@
   }
 
   function enlaceWhatsApp(telefono, texto) {
-    return 'https://wa.me/502' + telefono + (texto ? '?text=' + encodeURIComponent(texto) : '');
+    // La pagina intermedia de wa.me / api.whatsapp.com corrompe los emojis del texto.
+    // En celular se abre la app directo y en computadora WhatsApp Web directo.
+    const movil = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const base = movil ? 'whatsapp://send' : 'https://web.whatsapp.com/send';
+    return base + '?phone=502' + telefono + (texto ? '&text=' + encodeURIComponent(texto) : '');
   }
 
   async function enviarRecordatorio(cita) {
-    window.open(enlaceWhatsApp(cita.cliente_telefono, mensajeRecordatorio(cita)), '_blank', 'noopener');
+    const texto = mensajeRecordatorio(cita);
+    const enlace = enlaceWhatsApp(cita.cliente_telefono, texto);
+    // Respaldo: el mensaje queda copiado por si el chat no lo muestra.
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(texto)
+        .then(() => A.aviso('Mensaje copiado. Si no aparece en el chat, pégalo.'))
+        .catch(() => {});
+    }
+    if (enlace.startsWith('whatsapp:')) window.location.href = enlace;
+    else window.open(enlace, 'whatsapp-anexo', 'noopener');
     try {
       await api('admin/citas/' + cita.id, { metodo: 'PATCH', cuerpo: { accion: 'recordatorio' } });
       cita.recordatorio_enviado = true;
