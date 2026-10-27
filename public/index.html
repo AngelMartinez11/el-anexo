@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>El Anexo | Barbería bajo cita en San Juan Sacatepéquez</title>
+  <meta name="description" content="Agenda tu corte en El Anexo, estudio de barbería en San Juan Sacatepéquez. Elige servicio, día y hora en línea.">
+  <meta name="theme-color" content="#1d1510">
+  <link rel="icon" href="img/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+  <header class="barra">
+    <div class="contenedor">
+      <a class="marca" href="#inicio" aria-label="El Anexo, inicio">
+        <span class="sello"><img src="img/logo.png" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'EA'}))"></span>
+        <strong>El Anexo</strong>
+      </a>
+      <div id="zona-sesion">
+        <button class="boton boton-secundario boton-chico" id="btn-ingresar" type="button">Iniciar sesión</button>
+        <div id="sesion-activa" class="oculto" style="display:flex;gap:10px;align-items:center">
+          <button class="boton boton-secundario boton-chico" id="btn-mis-citas" type="button">Mis citas</button>
+          <button class="boton-texto" id="btn-salir" type="button">Salir</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main id="inicio">
+    <section class="hero">
+      <div class="poste" aria-hidden="true"></div>
+      <div class="contenedor">
+        <div class="hero-texto">
+          <h1>Tu corte, <span class="linea-2">tu identidad.</span></h1>
+          <p>Estudio de barbería masculino que combina lo clásico con lo moderno. Atendemos bajo cita para que tu tiempo se respete.</p>
+          <div class="acciones">
+            <a class="boton" href="#agendar">Agendar cita</a>
+            <a class="boton boton-secundario" href="#servicios">Ver servicios</a>
+          </div>
+          <div class="datos-rapidos">
+            <span>Con <strong id="dato-barbero">Eduardo González</strong></span>
+            <span><strong>San Juan Sacatepéquez</strong></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="seccion" id="servicios" aria-labelledby="titulo-servicios">
+      <div class="contenedor">
+        <div class="seccion-cabeza">
+          <div>
+            <h2 id="titulo-servicios">Servicios</h2>
+            <p>Precios fijos. Cada servicio incluye una atención personalizada a tu estilo.</p>
+          </div>
+        </div>
+        <ul class="pizarra" id="lista-servicios">
+          <li class="texto-suave">Cargando servicios...</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="seccion" id="agendar" aria-labelledby="titulo-agendar">
+      <div class="contenedor">
+        <div class="seccion-cabeza">
+          <div>
+            <h2 id="titulo-agendar">Agenda tu cita</h2>
+            <p id="texto-agendar">Elige el servicio, el día y la hora. Te confirmamos al instante.</p>
+          </div>
+        </div>
+
+        <div class="reserva" id="flujo-reserva">
+          <div>
+            <div class="paso" id="paso-1">
+              <div class="paso-titulo"><span class="paso-numero">1</span><h3>Servicio</h3></div>
+              <div class="opciones-servicio" id="opciones-servicio"></div>
+            </div>
+
+            <div class="paso bloqueado" id="paso-2">
+              <div class="paso-titulo"><span class="paso-numero">2</span><h3>Día y hora</h3></div>
+              <div class="mes-titulo">
+                <strong id="mes-visible">&nbsp;</strong>
+                <div class="flechas">
+                  <button class="flecha" id="dias-atras" type="button" aria-label="Días anteriores">&#8249;</button>
+                  <button class="flecha" id="dias-adelante" type="button" aria-label="Días siguientes">&#8250;</button>
+                </div>
+              </div>
+              <div class="tira-dias" id="tira-dias" role="group" aria-label="Días disponibles"></div>
+              <div id="zona-horas" aria-live="polite"></div>
+            </div>
+
+            <div class="paso bloqueado" id="paso-3">
+              <div class="paso-titulo"><span class="paso-numero">3</span><h3 id="titulo-paso-3">Tus datos</h3></div>
+              <form id="form-datos" novalidate>
+                <div id="datos-invitado">
+                  <div class="campo">
+                    <label for="r-nombre">Nombre completo</label>
+                    <input class="entrada" id="r-nombre" name="nombre" autocomplete="name" maxlength="80" required>
+                  </div>
+                  <div class="campo">
+                    <label for="r-telefono">Número de WhatsApp</label>
+                    <input class="entrada" id="r-telefono" name="telefono" inputmode="tel" autocomplete="tel-national" placeholder="5555-1234" maxlength="15" required>
+                  </div>
+                  <label class="casilla">
+                    <input type="checkbox" id="r-crear-pin">
+                    <span>Crear un PIN para agendar más rápido la próxima vez<br><small class="texto-suave">Solo tendrás que elegir día y hora.</small></span>
+                  </label>
+                  <div class="campo oculto" id="campo-pin" style="margin-top:14px">
+                    <label for="r-pin">PIN de 4 a 6 números</label>
+                    <input class="entrada" id="r-pin" inputmode="numeric" autocomplete="new-password" maxlength="6" pattern="\d{4,6}">
+                  </div>
+                </div>
+                <div id="datos-sesion" class="oculto">
+                  <p style="margin-top:0">Agendando como <strong id="nombre-sesion"></strong> (<span id="telefono-sesion"></span>).</p>
+                </div>
+                <div id="error-reserva" class="mensaje oculto" role="alert"></div>
+                <button class="boton" type="submit" id="btn-confirmar" style="width:100%;margin-top:8px">Confirmar cita</button>
+              </form>
+            </div>
+          </div>
+
+          <aside class="resumen" aria-label="Resumen de tu cita">
+            <h3>Tu cita</h3>
+            <dl>
+              <div><dt>Servicio</dt><dd id="res-servicio">Sin elegir</dd></div>
+              <div><dt>Cuándo</dt><dd id="res-cuando">Sin elegir</dd></div>
+              <div><dt>Con</dt><dd id="res-barbero">Eduardo González</dd></div>
+            </dl>
+            <div class="total"><span class="texto-suave">Total</span><strong id="res-total">Q0</strong></div>
+          </aside>
+        </div>
+
+        <div class="paso confirmacion oculto" id="confirmacion" tabindex="-1">
+          <div class="sello-grande" aria-hidden="true">
+            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          </div>
+          <h3>Cita confirmada</h3>
+          <p id="conf-detalle"></p>
+          <p id="conf-extra"></p>
+          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:20px">
+            <button class="boton" type="button" id="btn-otra">Agendar otra cita</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="seccion" id="ubicacion" aria-labelledby="titulo-ubicacion">
+      <div class="contenedor ubicacion">
+        <div>
+          <h2 id="titulo-ubicacion">Dónde estamos</h2>
+          <address id="direccion">11 Calle 4-04, San Juan Sacatepéquez a un costado de Espartanos Barbería</address>
+          <div class="enlaces">
+            <a class="boton" id="enlace-whatsapp" href="https://wa.me/50230046246" target="_blank" rel="noopener">Escribir por WhatsApp</a>
+            <a class="boton boton-secundario" id="enlace-instagram" href="https://www.instagram.com/el_anexosj" target="_blank" rel="noopener">Instagram</a>
+            <a class="boton boton-secundario" id="enlace-facebook" href="https://www.facebook.com/people/El-Anexo-SJ/61571937273104/" target="_blank" rel="noopener">Facebook</a>
+          </div>
+        </div>
+        <iframe class="mapa" title="Mapa de El Anexo" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
+          src="https://www.google.com/maps?q=11+Calle+4-04,+San+Juan+Sacatep%C3%A9quez,+Guatemala&output=embed"></iframe>
+      </div>
+    </section>
+  </main>
+
+  <footer class="pie">
+    <div class="contenedor">
+      <span>El Anexo, San Juan Sacatepéquez</span>
+      <a href="admin/" class="texto-suave">Administración</a>
+    </div>
+  </footer>
+
+  <dialog id="dlg-sesion" aria-labelledby="dlg-sesion-titulo">
+    <div class="dialogo-cuerpo">
+      <div class="dialogo-cabeza">
+        <h3 id="dlg-sesion-titulo">Tu cuenta</h3>
+        <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="pestanas" role="tablist">
+        <button type="button" role="tab" aria-selected="true" data-pestana="ingresar">Iniciar sesión</button>
+        <button type="button" role="tab" aria-selected="false" data-pestana="crear">Crear cuenta</button>
+      </div>
+      <form id="form-sesion" novalidate>
+        <div class="campo oculto" id="campo-nombre-cuenta">
+          <label for="s-nombre">Nombre completo</label>
+          <input class="entrada" id="s-nombre" autocomplete="name" maxlength="80">
+        </div>
+        <div class="campo">
+          <label for="s-telefono">Número de WhatsApp</label>
+          <input class="entrada" id="s-telefono" inputmode="tel" autocomplete="tel-national" placeholder="5555-1234" maxlength="15">
+        </div>
+        <div class="campo">
+          <label for="s-pin" id="s-pin-label">PIN</label>
+          <input class="entrada" id="s-pin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="6">
+        </div>
+        <div id="error-sesion" class="mensaje oculto" role="alert"></div>
+        <button class="boton" type="submit" id="btn-sesion" style="width:100%">Iniciar sesión</button>
+        <p class="texto-suave" style="font-size:0.88rem;margin-bottom:0">¿Olvidaste tu PIN? Escríbenos por WhatsApp y lo restablecemos.</p>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog id="dlg-citas" aria-labelledby="dlg-citas-titulo">
+    <div class="dialogo-cuerpo">
+      <div class="dialogo-cabeza">
+        <h3 id="dlg-citas-titulo">Mis citas</h3>
+        <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">&times;</button>
+      </div>
+      <div id="contenido-citas"><p class="texto-suave">Cargando...</p></div>
+    </div>
+  </dialog>
+
+  <script src="js/comun.js"></script>
+  <script src="js/cliente.js"></script>
+</body>
+</html>
