@@ -4,11 +4,11 @@ import {
   exigirAdmin, tokenAdmin, verificarPasswordAdmin, guardarPasswordAdmin,
   revisarIntentos, registrarIntentoFallido, limpiarIntentos,
 } from './auth.mjs';
-import { obtenerConfiguracion, horarioDeFecha, slotsDeFecha } from './disponibilidad.mjs';
+import { obtenerConfiguracion, horarioDeFecha, slotsDeFecha, horarioDeRango } from './disponibilidad.mjs';
 import { crearCita, obtenerServicio, clientePorTelefono, SELECT_CITA } from './citas.mjs';
 import {
   ErrorHttp, ahoraGT, esFechaValida, rangoMes, mesAnterior, normalizarTelefono, validarNombre,
-  limpiarTexto, aEntero, aMonto, horaAMinutos, minutosAHora,
+  limpiarTexto, aEntero, aMonto, horaAMinutos, minutosAHora, sumarDias, diaSemana,
 } from './utilidades.mjs';
 
 // ---------- Sesion ----------
@@ -515,6 +515,74 @@ async function guardarDiaEspecial(cuerpo) {
   return { ...(await obtenerHorario()), citas_en_fecha: conflictos[0].n };
 }
 
+// ---------- Planificador de las proximas 12 semanas ----------
+
+const SEMANAS_PLAN = 12;
+
+function lunesDe(fecha) {
+  const dow = diaSemana(fecha); // 0 = domingo
+  return sumarDias(fecha, dow === 0 ? -6 : 1 - dow);
+}
+
+function semanasDisponibles() {
+  const primer = lunesDe(ahoraGT().fecha);
+  return Array.from({ length: SEMANAS_PLAN }, (_, i) => sumarDias(primer, i * 7));
+}
+
+async function planSemana(url) {
+  const semanas = semanasDisponibles();
+  const pedida = url.searchParams.get('inicio');
+  const inicio = esFechaValida(pedida) ? lunesDe(pedida) : semanas[0];
+  if (!semanas.includes(inicio)) throw new ErrorHttp(400, 'Solo se pueden planificar las próximas 12 semanas.');
+  return { semanas, inicio, hoy: ahoraGT().fecha, dias: await horarioDeRango(inicio, 7) };
+}
+
+async function guardarPlanSemana(cuerpo) {
+  const semanas = semanasDisponibles();
+  const hoy = ahoraGT().fecha;
+  const limite = sumarDias(semanas[semanas.length - 1], 6);
+  if (!Array.isArray(cuerpo.dias) || cuerpo.dias.length === 0 || cuerpo.dias.length > 7) {
+    throw new ErrorHttp(400, 'Envía los días de la semana a guardar.');
+  }
+  const cambios = cuerpo.dias.map((d) => {
+    if (!esFechaValida(d.fecha) || d.fecha < hoy || d.fecha > limite) {
+      throw new ErrorHttp(400, 'Hay una fecha fuera de las próximas 12 semanas o que ya pasó.');
+    }
+    const modo = ['normal', 'cerrado', 'personalizado'].includes(d.modo) ? d.modo : null;
+    if (!modo) throw new ErrorHttp(400, 'Modo de día no válido.');
+    const rangos = modo === 'personalizado' ? validarRangos(d.rangos || []) : [];
+    if (modo === 'personalizado' && rangos.length === 0) {
+      throw new ErrorHttp(400, `Agrega al menos un turno para el ${d.fecha} o márcalo como cerrado.`);
+    }
+    return { fecha: d.fecha, modo, rangos, nota: limpiarTexto(d.nota || '', 120) };
+  });
+  await transaccion(async (tx) => {
+    for (const c of cambios) {
+      if (c.modo === 'normal') {
+        await tx.consulta('DELETE FROM dias_especiales WHERE fecha = $1', [c.fecha]);
+      } else {
+        await tx.consulta(
+          `INSERT INTO dias_especiales (fecha, cerrado, rangos, nota) VALUES ($1, $2, $3::jsonb, $4)
+           ON CONFLICT (fecha) DO UPDATE SET cerrado = EXCLUDED.cerrado, rangos = EXCLUDED.rangos, nota = EXCLUDED.nota`,
+          [c.fecha, c.modo === 'cerrado', JSON.stringify(c.rangos), c.nota],
+        );
+      }
+    }
+  });
+  // Avisa si quedaron citas pendientes fuera del nuevo horario.
+  const fechas = cambios.map((c) => c.fecha);
+  const dias = await horarioDeRango(lunesDe(fechas[0]), 7);
+  const citas = await consulta(
+    `${SELECT_CITA} WHERE c.fecha = ANY($1::date[]) AND c.estado = 'pendiente' ORDER BY c.fecha, c.inicio_min`,
+    [fechas],
+  );
+  const fuera = citas.filter((c) => {
+    const dia = dias.find((x) => x.fecha === c.fecha);
+    return !dia || !dia.rangos.some((r) => c.inicio_min >= r.inicio && c.fin_min <= r.fin);
+  }).map((c) => ({ fecha: c.fecha, hora: minutosAHora(c.inicio_min), cliente: c.cliente_nombre }));
+  return { inicio: lunesDe(fechas[0]), dias, fuera_de_horario: fuera };
+}
+
 async function eliminarDiaEspecial(url) {
   const fecha = url.searchParams.get('fecha');
   if (!esFechaValida(fecha)) throw new ErrorHttp(400, 'Fecha no válida.');
@@ -594,10 +662,16 @@ const CLAVES_EDITABLES = {
   whatsapp: (v) => normalizarTelefono(v),
   intervalo_min: (v) => ([10, 15, 20, 30, 45, 60].includes(aEntero(v)) ? String(aEntero(v)) : null),
   anticipacion_min: (v) => (aEntero(v) >= 0 && aEntero(v) <= 1440 ? String(aEntero(v)) : null),
-  dias_adelanto: (v) => (aEntero(v) >= 1 && aEntero(v) <= 60 ? String(aEntero(v)) : null),
+  dias_adelanto: (v) => (aEntero(v) >= 1 && aEntero(v) <= 90 ? String(aEntero(v)) : null),
   horas_cancelacion: (v) => (aEntero(v) >= 0 && aEntero(v) <= 72 ? String(aEntero(v)) : null),
   instagram: (v) => (/^https:\/\/\S+$/.test(String(v)) ? String(v) : null),
   facebook: (v) => (/^https:\/\/\S+$/.test(String(v)) ? String(v) : null),
+  maps_url: (v) => (/^https:\/\/\S+$/.test(String(v)) ? String(v) : null),
+  maps_coordenadas: (v) => {
+    const m = /^\s*(-?\d{1,2}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)\s*$/.exec(String(v));
+    if (!m || Math.abs(Number(m[1])) > 90 || Math.abs(Number(m[2])) > 180) return null;
+    return `${m[1]},${m[2]}`;
+  },
 };
 
 async function guardarConfiguracion(cuerpo) {
@@ -640,6 +714,8 @@ export const rutasAdmin = [
   ['PUT', /^admin\/horario\/semana$/, admin((req, url, cuerpo) => guardarSemana(cuerpo))],
   ['PUT', /^admin\/horario\/especial$/, admin((req, url, cuerpo) => guardarDiaEspecial(cuerpo))],
   ['DELETE', /^admin\/horario\/especial$/, admin((req, url) => eliminarDiaEspecial(url))],
+  ['GET', /^admin\/horario\/plan$/, admin((req, url) => planSemana(url))],
+  ['PUT', /^admin\/horario\/plan$/, admin((req, url, cuerpo) => guardarPlanSemana(cuerpo))],
   ['POST', /^admin\/horario\/bloqueos$/, admin((req, url, cuerpo) => crearBloqueo(cuerpo))],
   ['DELETE', /^admin\/horario\/bloqueos\/(\d+)$/, admin((req, url, cuerpo, p) => eliminarBloqueo(Number(p[1])))],
   ['GET', /^admin\/servicios$/, admin(() => listarServicios())],

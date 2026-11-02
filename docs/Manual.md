@@ -23,7 +23,8 @@ Página de reservas para clientes y panel de administración para la barbería E
 - Opción de crear un PIN de 4 a 6 números al reservar o desde "Crear cuenta". Con sesión iniciada solo se elige servicio, día y hora.
 - "Mis citas": próximas citas, historial y cancelación hasta X horas antes (configurable).
 - Límite de 2 citas pendientes por cliente para evitar reservas falsas.
-- Ubicación con mapa, WhatsApp, Instagram y Facebook.
+- Ubicación con mapa (coordenadas exactas del local), botón "Cómo llegar" a Google Maps, WhatsApp, Instagram y Facebook.
+- El pie de página no enlaza al panel: se entra directo en `/admin/`. Debajo lleva un crédito pequeño con el contacto del desarrollador.
 
 ### Panel de administrador (`/admin/`)
 
@@ -32,8 +33,8 @@ Página de reservas para clientes y panel de administración para la barbería E
 | Agenda | Vista por día con horarios libres, ocupados (con nombre) y bloqueados; calendario mensual con cantidad de citas; citas nuevas y VIP con precio ajustable; registro de clientes atendidos sin cita; cobro con un clic en Efectivo o Tarjeta; recordatorio por WhatsApp con mensaje armado; marcar "No asistió"; cancelar y reactivar citas |
 | Clientes | Búsqueda, historial, visitas, total gastado, inasistencias, notas del barbero, bloqueo con motivo, restablecer PIN |
 | Finanzas | Ingresos del día, mes actual y mes pasado, separados por efectivo y tarjeta; gastos y ganancia neta; efectivo en caja; servicios brindados del día; desglose por servicio; reporte mensual por día; descarga a Excel (CSV); aviso de citas pasadas sin cobrar |
-| Horario | Horario semanal con uno o varios turnos por día, días especiales (cerrar o abrir con otro horario) y bloqueo de horas |
-| Ajustes | Servicios (crear, editar, desactivar), datos del negocio, reglas de la agenda y cambio de contraseña del panel |
+| Horario | Horario normal (se repite cada semana) con uno o varios turnos por día; planificador de las próximas 12 semanas para ajustar días concretos (horario especial o cerrado) sin tocar el horario normal; días especiales y bloqueo de horas |
+| Ajustes | Servicios (crear, editar, desactivar), datos del negocio, enlace y coordenadas de Google Maps, reglas de la agenda y cambio de contraseña del panel |
 
 ### Recordatorio por WhatsApp
 
@@ -163,7 +164,7 @@ npm test
 npm run demo
 ```
 
-- `npm test` ejecuta 17 pruebas de la API contra PostgreSQL en memoria (PGlite): reservas, traslapes, PIN, cancelación, cobros, finanzas, bloqueos, horario, ajustes y cambio de contraseña.
+- `npm test` ejecuta 19 pruebas de la API contra PostgreSQL en memoria (PGlite): reservas, traslapes, PIN, cancelación, cobros, finanzas, bloqueos, horario, planificador de 12 semanas, mapa, ajustes y cambio de contraseña.
 - `npm run demo` levanta `http://localhost:8888` con datos de ejemplo, sin Supabase ni Netlify. Panel en `/admin/` con la contraseña `anexo-demo`. Los datos se pierden al detener el servidor.
 
 Para probar contra la base real de Supabase:
@@ -229,6 +230,9 @@ Rutas públicas: `GET /api/publico/info`, `GET /api/publico/dias`, `GET /api/pub
 Rutas del panel (requieren token de administrador): `admin/login`, `admin/agenda`, `admin/mes`, `admin/libres`, `admin/citas`, `admin/clientes`, `admin/finanzas`, `admin/finanzas/mes`, `admin/finanzas/exportar`, `admin/gastos`, `admin/horario`, `admin/servicios`, `admin/config`. El detalle está en `netlify/lib/rutas-admin.mjs`.
 
 ## 8. Mantenimiento
+
+- **Planificar semanas**: Horario > Próximas 12 semanas. Se elige la semana (un punto marca las que ya tienen cambios) y en cada día: "Horario normal", "Horario especial" (con sus turnos) o "Cerrado", con nota opcional. Se guarda como días especiales; al volver un día a "Horario normal" se quita la excepción. Si alguna cita pendiente queda fuera del nuevo horario, el panel la avisa para moverla o cancelarla. Para que los clientes puedan reservar esas semanas, subir en Ajustes "Días que se pueden reservar por adelantado" (máximo 90).
+- **Cambiar la ubicación**: Ajustes > dirección, "Enlace de Google Maps" (botón "Cómo llegar") y "Coordenadas del mapa". Las coordenadas se copian en Google Maps con clic derecho sobre el local.
 
 - **Cambios en la base de datos**: agregar una migración nueva al final de `MIGRACIONES` en `netlify/lib/migraciones.mjs` con el siguiente número de versión. No modificar migraciones ya publicadas.
 - **Cambiar la contraseña del panel**: Ajustes > Cambiar contraseña del panel. Se pide la actual, se guarda cifrada (scrypt) en la base de datos y se cierran las sesiones abiertas en otros dispositivos. Desde ese momento `ADMIN_PASSWORD` ya no se usa.

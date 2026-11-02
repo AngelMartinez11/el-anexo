@@ -120,3 +120,25 @@ export async function estaDisponible(fecha, inicio, duracion, opciones = {}) {
   const libres = await slotsDeFecha(fecha, duracion, opciones);
   return libres.includes(inicio);
 }
+
+// Horario efectivo de varios dias seguidos (para el planificador por semanas).
+export async function horarioDeRango(desde, cantidad) {
+  const hasta = sumarDias(desde, cantidad - 1);
+  const datos = await cargarDatos(desde, hasta);
+  const dias = [];
+  for (let i = 0; i < cantidad; i += 1) {
+    const fecha = sumarDias(desde, i);
+    const { rangos, especial } = rangosDeFecha(datos, fecha);
+    dias.push({
+      fecha,
+      rangos,
+      base: datos.porDia.get(diaSemana(fecha)) || [],
+      especial: Boolean(especial),
+      cerrado: Boolean(especial && especial.cerrado),
+      nota: especial ? especial.nota : '',
+      citas: (datos.citas.get(fecha) || []).length,
+      bloqueos: (datos.bloqueos.get(fecha) || []).length,
+    });
+  }
+  return dias;
+}

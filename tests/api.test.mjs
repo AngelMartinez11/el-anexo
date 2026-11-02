@@ -343,3 +343,52 @@ test('cambiar contraseña del administrador cierra las sesiones anteriores', asy
   assert.equal(conf.datos.config.admin_password_hash, undefined, 'no expone el hash');
   assert.equal(conf.datos.config.admin_version, undefined);
 });
+
+test('planificador de 12 semanas: personalizar, cerrar y volver al horario normal', async () => {
+  const t = (await llamar('POST', 'admin/login', { cuerpo: { password: 'Nueva.2026x' } })).datos.token;
+  const plan = await llamar('GET', 'admin/horario/plan', { token: t });
+  assert.equal(plan.estado, 200, JSON.stringify(plan.datos));
+  assert.equal(plan.datos.semanas.length, 12);
+  assert.equal(plan.datos.dias.length, 7);
+
+  const semana8 = plan.datos.semanas[7];
+  const p8 = await llamar('GET', `admin/horario/plan?inicio=${semana8}`, { token: t });
+  assert.equal(p8.datos.inicio, semana8);
+  const martes = p8.datos.dias[1].fecha;
+  const miercoles = p8.datos.dias[2].fecha;
+
+  const fuera = await llamar('GET', `admin/horario/plan?inicio=${sumarDias(plan.datos.semanas[11], 7)}`, { token: t });
+  assert.equal(fuera.estado, 400, 'no permite la semana 13');
+
+  const g = await llamar('PUT', 'admin/horario/plan', {
+    token: t,
+    cuerpo: { dias: [
+      { fecha: martes, modo: 'personalizado', rangos: [{ inicio: '08:00', fin: '12:00' }], nota: 'Turno corto' },
+      { fecha: miercoles, modo: 'cerrado', nota: 'Viaje' },
+    ] },
+  });
+  assert.equal(g.estado, 200, JSON.stringify(g.datos));
+  assert.deepEqual(g.datos.dias[1].rangos, [{ inicio: 480, fin: 720 }]);
+  assert.equal(g.datos.dias[2].cerrado, true);
+
+  const h = await llamar('PUT', 'admin/horario/plan', {
+    token: t, cuerpo: { dias: [{ fecha: martes, modo: 'normal' }] },
+  });
+  assert.equal(h.datos.dias[1].especial, false);
+
+  const pasado = await llamar('PUT', 'admin/horario/plan', {
+    token: t, cuerpo: { dias: [{ fecha: sumarDias(ahoraGT().fecha, -1), modo: 'cerrado' }] },
+  });
+  assert.equal(pasado.estado, 400);
+});
+
+test('mapa: configuracion publica y validacion de coordenadas', async () => {
+  const info = await llamar('GET', 'publico/info');
+  assert.equal(info.datos.config.maps_coordenadas, '14.7173655,-90.6419482');
+  assert.equal(info.datos.config.direccion, '8 Avenida 8-08, San Juan Sacatepéquez');
+  const t = (await llamar('POST', 'admin/login', { cuerpo: { password: 'Nueva.2026x' } })).datos.token;
+  const malo = await llamar('PUT', 'admin/config', { token: t, cuerpo: { maps_coordenadas: 'hola' } });
+  assert.equal(malo.estado, 400);
+  const ok = await llamar('PUT', 'admin/config', { token: t, cuerpo: { maps_coordenadas: ' 14.7, -90.64 ' } });
+  assert.equal(ok.datos.config.maps_coordenadas, '14.7,-90.64');
+});

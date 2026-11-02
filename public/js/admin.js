@@ -901,6 +901,7 @@
     const orden = [1, 2, 3, 4, 5, 6, 0];
     $('editor-semana').innerHTML = orden.map((d) => pintarDiaSemana(d, r.semana[d].rangos)).join('');
     pintarListasHorario(r);
+    cargarPlan(estado.semanaPlan);
     const hoy = A.hoyGT().fecha;
     if (!$('e-fecha').value) $('e-fecha').value = hoy;
     if (!$('b-fecha').value) $('b-fecha').value = hoy;
@@ -908,7 +909,164 @@
     $('b-fecha').min = hoy;
   }
 
+  // ---------- Planificador de las proximas 12 semanas ----------
+
+  const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+  function fechaCortaMes(fecha) {
+    const d = A.fechaUTC(fecha);
+    return d.getUTCDate() + ' ' + MESES_CORTOS[d.getUTCMonth()];
+  }
+
+  function textoRangos(rangos) {
+    return rangos.length ? rangos.map((x) => A.hora12(x.inicio) + ' a ' + A.hora12(x.fin)).join(', ') : 'Cerrado';
+  }
+
+  async function cargarPlan(inicio) {
+    let r;
+    try {
+      r = await api('admin/horario/plan' + (inicio ? '?inicio=' + inicio : ''));
+    } catch (error) {
+      $('plan-semana').innerHTML = '<div class="mensaje">' + esc(error.message) + '</div>';
+      return;
+    }
+    estado.semanaPlan = r.inicio;
+    estado.planSemanas = r.semanas;
+    estado.planDias = r.dias.map((d) => ({
+      fecha: d.fecha,
+      base: d.base,
+      citas: d.citas,
+      pasado: d.fecha < r.hoy,
+      modo: d.cerrado ? 'cerrado' : (d.especial ? 'personalizado' : 'normal'),
+      rangos: d.especial && !d.cerrado ? d.rangos : d.base,
+      nota: d.nota || '',
+    }));
+    mostrarError('aviso-plan', '');
+    pintarSemanasPlan();
+    pintarPlan();
+  }
+
+  function pintarSemanasPlan() {
+    const especiales = new Set((estado.especialesFuturos || []).map((e) => e.fecha));
+    $('tira-semanas').innerHTML = estado.planSemanas.map((inicio, i) => {
+      const fin = A.sumarDias(inicio, 6);
+      let tieneCambios = false;
+      for (let k = 0; k < 7; k += 1) if (especiales.has(A.sumarDias(inicio, k))) tieneCambios = true;
+      const titulo = i === 0 ? 'Esta semana' : (i === 1 ? 'Próxima semana' : 'Semana ' + (i + 1));
+      return '<button type="button" class="chip-semana" data-semana="' + inicio + '" aria-pressed="' + (inicio === estado.semanaPlan) + '">' +
+        titulo + (tieneCambios ? '<span class="punto" title="Tiene días con horario especial"></span>' : '') +
+        '<small>' + fechaCortaMes(inicio) + ' al ' + fechaCortaMes(fin) + '</small></button>';
+    }).join('');
+    const activo = $('tira-semanas').querySelector('[aria-pressed="true"]');
+    if (activo) activo.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+
+  function filaPlan(d, i) {
+    const nombre = mayuscula(A.DIAS[A.fechaUTC(d.fecha).getUTCDay()]);
+    const citas = d.citas ? ', ' + d.citas + (d.citas === 1 ? ' cita' : ' citas') : '';
+    let detalle;
+    if (d.modo === 'normal') {
+      detalle = '<div class="resumen-normal">' + esc(textoRangos(d.base)) + '</div>';
+    } else {
+      const turnos = d.modo === 'personalizado'
+        ? '<div class="turnos">' + (d.rangos.length ? d.rangos : [{ inicio: 600, fin: 1080 }]).map(filaTurno).join('') + '</div>' +
+          '<button type="button" class="boton-texto" data-agregar-turno-plan style="margin-top:6px">Agregar turno</button>'
+        : '';
+      detalle = turnos + '<input class="entrada nota-plan" data-nota maxlength="120" placeholder="Nota (opcional): feriado, viaje..." value="' + esc(d.nota) + '">';
+    }
+    return '<div class="dia-plan' + (d.pasado ? ' pasado' : '') + '" data-plan="' + i + '">' +
+      '<div class="fecha-plan"><strong>' + nombre + '</strong><small>' + fechaCortaMes(d.fecha) + esc(citas) + '</small></div>' +
+      '<select class="entrada" data-modo aria-label="Horario del ' + esc(A.fechaLarga(d.fecha)) + '"' + (d.pasado ? ' disabled' : '') + '>' +
+        '<option value="normal"' + (d.modo === 'normal' ? ' selected' : '') + '>Horario normal</option>' +
+        '<option value="personalizado"' + (d.modo === 'personalizado' ? ' selected' : '') + '>Horario especial</option>' +
+        '<option value="cerrado"' + (d.modo === 'cerrado' ? ' selected' : '') + '>Cerrado</option>' +
+      '</select><div class="detalle-plan">' + detalle + '</div></div>';
+  }
+
+  function pintarPlan() {
+    $('plan-semana').innerHTML = estado.planDias.map(filaPlan).join('');
+  }
+
+  // Lee lo que el administrador escribio antes de volver a pintar o guardar.
+  function leerPlan() {
+    document.querySelectorAll('#plan-semana .dia-plan').forEach((fila) => {
+      const d = estado.planDias[Number(fila.dataset.plan)];
+      d.modo = fila.querySelector('[data-modo]').value;
+      const nota = fila.querySelector('[data-nota]');
+      if (nota) d.nota = nota.value;
+      const turnos = fila.querySelectorAll('.turno');
+      if (turnos.length) {
+        d.rangos = Array.from(turnos).map((tr) => {
+          const [ini, fin] = tr.querySelectorAll('input');
+          return { inicio: A.minutosDeHora(ini.value), fin: fin.value === '00:00' ? 1440 : A.minutosDeHora(fin.value) };
+        }).filter((x) => x.inicio !== null && x.fin !== null);
+      }
+    });
+  }
+
+  $('tira-semanas').addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-semana]');
+    if (b) cargarPlan(b.dataset.semana);
+  });
+
+  $('plan-semana').addEventListener('change', (ev) => {
+    if (!ev.target.matches('[data-modo]')) return;
+    leerPlan();
+    const d = estado.planDias[Number(ev.target.closest('.dia-plan').dataset.plan)];
+    if (d.modo === 'personalizado' && !d.rangos.length) d.rangos = d.base.length ? d.base : [{ inicio: 600, fin: 1080 }];
+    pintarPlan();
+  });
+
+  $('plan-semana').addEventListener('click', (ev) => {
+    const b = ev.target.closest('button');
+    if (!b) return;
+    if (b.hasAttribute('data-agregar-turno-plan')) {
+      const turnos = b.parentElement.querySelector('.turnos');
+      const inputs = turnos.querySelectorAll('.turno input');
+      const finPrevio = inputs.length ? A.minutosDeHora(inputs[inputs.length - 1].value) || 780 : 780;
+      turnos.insertAdjacentHTML('beforeend', filaTurno({ inicio: Math.min(finPrevio + 60, 1380), fin: Math.min(finPrevio + 300, 1440) }));
+    } else if (b.hasAttribute('data-quitar-turno')) {
+      const turnos = b.closest('.turnos');
+      if (turnos.querySelectorAll('.turno').length > 1) b.closest('.turno').remove();
+      else A.aviso('Deja al menos un turno o elige "Cerrado".');
+    }
+  });
+
+  $('guardar-plan').addEventListener('click', async () => {
+    leerPlan();
+    mostrarError('aviso-plan', '');
+    const dias = estado.planDias.filter((d) => !d.pasado).map((d) => ({
+      fecha: d.fecha,
+      modo: d.modo,
+      nota: d.nota,
+      rangos: d.modo === 'personalizado' ? d.rangos.map((x) => ({ inicio: A.hora24(x.inicio), fin: x.fin === 1440 ? '24:00' : A.hora24(x.fin) })) : [],
+    }));
+    if (!dias.length) return A.aviso('Todos los días de esta semana ya pasaron.');
+    const boton = $('guardar-plan');
+    boton.disabled = true;
+    try {
+      const r = await api('admin/horario/plan', { metodo: 'PUT', cuerpo: { dias } });
+      if (r.fuera_de_horario.length) {
+        mostrarError('aviso-plan', 'Semana guardada. Ojo: estas citas quedaron fuera del nuevo horario, revísalas en la Agenda: ' +
+          r.fuera_de_horario.map((c) => A.fechaCorta(c.fecha) + ' ' + c.hora + ' ' + c.cliente).join('; ') + '.');
+      } else {
+        A.aviso('Semana guardada.');
+      }
+      const h = await api('admin/horario');
+      pintarListasHorario(h);
+      const aviso = $('aviso-plan').textContent;
+      await cargarPlan(estado.semanaPlan);
+      if (aviso) mostrarError('aviso-plan', aviso);
+    } catch (error) {
+      mostrarError('aviso-plan', error.message);
+    } finally {
+      boton.disabled = false;
+    }
+  });
+
   function pintarListasHorario(r) {
+    estado.especialesFuturos = r.especiales;
+    if (estado.planSemanas) pintarSemanasPlan();
     $('lista-especiales').innerHTML = r.especiales.length
       ? r.especiales.map((e) => {
         const rangos = typeof e.rangos === 'string' ? JSON.parse(e.rangos) : e.rangos;
@@ -1082,7 +1240,7 @@
     mostrarError('error-config', '');
     const cuerpo = {};
     ['negocio_nombre', 'barbero_nombre', 'direccion', 'whatsapp', 'intervalo_min', 'anticipacion_min',
-      'dias_adelanto', 'horas_cancelacion', 'instagram', 'facebook'].forEach((c) => {
+      'dias_adelanto', 'horas_cancelacion', 'instagram', 'facebook', 'maps_url', 'maps_coordenadas'].forEach((c) => {
       const v = $('c-' + c).value.trim();
       if (v !== '') cuerpo[c] = v;
     });

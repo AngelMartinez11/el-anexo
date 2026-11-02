@@ -111,10 +111,18 @@
       <section id="vista-horario" data-seccion class="oculto">
         <div class="seccion-titulo"><h1>Horario de atención</h1></div>
         <div class="bloque">
-          <h2>Horario semanal</h2>
-          <p class="texto-suave">Cada día puede tener uno o varios turnos. Un día sin turnos queda cerrado.</p>
+          <h2>Horario normal</h2>
+          <p class="texto-suave">Es el horario que se repite todas las semanas. Cada día puede tener uno o varios turnos; un día sin turnos queda cerrado.</p>
           <div id="editor-semana"></div>
-          <button class="boton" type="button" id="guardar-semana">Guardar horario semanal</button>
+          <button class="boton" type="button" id="guardar-semana">Guardar horario normal</button>
+        </div>
+        <div class="bloque">
+          <h2>Próximas 12 semanas</h2>
+          <p class="texto-suave">Elige una semana y ajusta sus días sin cambiar el horario normal: abre más temprano, cierra un día o deja el horario normal.</p>
+          <div class="tira-semanas" id="tira-semanas" role="group" aria-label="Semanas a planificar"></div>
+          <div id="plan-semana" aria-live="polite"></div>
+          <div id="aviso-plan" class="mensaje oculto" role="alert"></div>
+          <button class="boton" type="button" id="guardar-plan">Guardar esta semana</button>
         </div>
         <div class="dos-columnas">
           <div class="bloque">
@@ -170,10 +178,12 @@
               </select>
             </div>
             <div class="campo"><label for="c-anticipacion_min">Anticipación mínima para reservar (minutos)</label><input class="entrada" id="c-anticipacion_min" type="number" min="0" max="1440"></div>
-            <div class="campo"><label for="c-dias_adelanto">Días que se pueden reservar por adelantado</label><input class="entrada" id="c-dias_adelanto" type="number" min="1" max="60"></div>
+            <div class="campo"><label for="c-dias_adelanto">Días que se pueden reservar por adelantado</label><input class="entrada" id="c-dias_adelanto" type="number" min="1" max="90"></div>
             <div class="campo"><label for="c-horas_cancelacion">Horas antes para que el cliente pueda cancelar</label><input class="entrada" id="c-horas_cancelacion" type="number" min="0" max="72"></div>
             <div class="campo"><label for="c-instagram">Instagram</label><input class="entrada" id="c-instagram" type="url"></div>
             <div class="campo"><label for="c-facebook">Facebook</label><input class="entrada" id="c-facebook" type="url"></div>
+            <div class="campo"><label for="c-maps_url">Enlace de Google Maps (botón "Cómo llegar")</label><input class="entrada" id="c-maps_url" type="url"></div>
+            <div class="campo"><label for="c-maps_coordenadas">Coordenadas del mapa (latitud, longitud)</label><input class="entrada" id="c-maps_coordenadas" placeholder="14.7173655,-90.6419482"></div>
           </div>
           <div id="error-config" class="mensaje oculto" role="alert"></div>
           <button class="boton" type="submit">Guardar ajustes</button>

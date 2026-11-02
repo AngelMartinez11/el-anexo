@@ -190,3 +190,28 @@
   .cal-dia { min-height: 48px; padding: 4px; }
   .turno .entrada { width: 128px; }
 }
+
+/* Planificador de 12 semanas */
+.tira-semanas { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 10px; margin: 6px 0 8px; scrollbar-width: thin; scrollbar-color: var(--cuero) transparent; }
+.chip-semana {
+  flex: 0 0 auto; min-height: 44px; padding: 6px 14px; border-radius: var(--radio);
+  border: 1px solid var(--cuero); background: var(--espresso); cursor: pointer; text-align: left; line-height: 1.25;
+}
+.chip-semana small { display: block; color: var(--humo); font-size: 0.75rem; }
+.chip-semana[aria-pressed="true"] { background: var(--cobre); border-color: var(--cobre); color: var(--espresso); }
+.chip-semana[aria-pressed="true"] small { color: var(--espresso); }
+.chip-semana .punto { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--cobre-claro); margin-left: 6px; vertical-align: 2px; }
+.chip-semana[aria-pressed="true"] .punto { background: var(--espresso); }
+.dia-plan { display: grid; grid-template-columns: 140px 200px minmax(0, 1fr); gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--tabaco-alto); align-items: start; }
+.dia-plan:last-child { border-bottom: 0; margin-bottom: 14px; }
+.dia-plan.pasado { opacity: 0.45; }
+.dia-plan .fecha-plan strong { display: block; }
+.dia-plan .fecha-plan small { color: var(--humo); }
+.dia-plan select.entrada { min-height: 40px; }
+.dia-plan .resumen-normal { color: var(--humo); padding-top: 9px; }
+.dia-plan .nota-plan { display: block; width: 100%; margin-top: 8px; min-height: 38px; max-width: 360px; }
+.dia-plan .detalle-plan > .nota-plan:first-child { margin-top: 0; }
+.dia-plan [data-agregar-turno-plan] { display: block; }
+@media (max-width: 760px) {
+  .dia-plan { grid-template-columns: 1fr; gap: 6px; }
+}
