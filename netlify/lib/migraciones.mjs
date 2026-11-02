@@ -148,6 +148,22 @@ export const MIGRACIONES = [
       WHERE NOT EXISTS (SELECT 1 FROM horario_semanal);
     `,
   },
+  {
+    version: 2,
+    nombre: 'ubicacion_mapa',
+    sql: `
+      -- Enlace y coordenadas del mapa, editables desde Ajustes.
+      INSERT INTO configuracion (clave, valor) VALUES
+        ('maps_url', 'https://maps.app.goo.gl/QwJcdx3eaPen3jYe8'),
+        ('maps_coordenadas', '14.7173655,-90.6419482')
+      ON CONFLICT (clave) DO NOTHING;
+
+      -- Solo reemplaza la direccion si todavia es la original.
+      UPDATE configuracion SET valor = '8 Avenida 8-08, San Juan Sacatepéquez'
+      WHERE clave = 'direccion'
+        AND valor = '11 Calle 4-04, San Juan Sacatepéquez a un costado de Espartanos Barbería';
+    `,
+  },
 ];
 
 export const VERSION_ACTUAL = MIGRACIONES[MIGRACIONES.length - 1].version;

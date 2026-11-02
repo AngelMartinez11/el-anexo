@@ -37,6 +37,11 @@
     $('enlace-whatsapp').href = 'https://wa.me/502' + c.whatsapp;
     if (c.instagram) $('enlace-instagram').href = c.instagram;
     if (c.facebook) $('enlace-facebook').href = c.facebook;
+    if (c.maps_url) $('enlace-maps').href = c.maps_url;
+    // El mapa usa las coordenadas exactas; si no hay, busca por la direccion.
+    const destino = c.maps_coordenadas || (c.direccion + ', Guatemala');
+    const srcMapa = 'https://www.google.com/maps?q=' + encodeURIComponent(destino) + '&z=17&output=embed';
+    if ($('mapa').getAttribute('src') !== srcMapa) $('mapa').src = srcMapa;
     pintarServicios();
     pintarOpciones();
   }

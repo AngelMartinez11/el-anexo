@@ -13,7 +13,7 @@ import {
 
 const CLAVES_PUBLICAS = [
   'negocio_nombre', 'barbero_nombre', 'direccion', 'whatsapp', 'intervalo_min',
-  'dias_adelanto', 'horas_cancelacion', 'instagram', 'facebook',
+  'dias_adelanto', 'horas_cancelacion', 'instagram', 'facebook', 'maps_url', 'maps_coordenadas',
 ];
 
 async function info() {
@@ -30,7 +30,7 @@ async function dias(url) {
   const servicio = await obtenerServicio(aEntero(url.searchParams.get('servicio')));
   const config = await obtenerConfiguracion();
   const hoy = ahoraGT().fecha;
-  const cantidad = Math.min((config.dias_adelanto || 30) + 1, 62);
+  const cantidad = Math.min((config.dias_adelanto || 30) + 1, 91);
   return { dias: await resumenDias(hoy, cantidad, servicio.duracion_min, { config }) };
 }
 
